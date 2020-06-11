@@ -108,8 +108,8 @@ function Show-PMConfig{
     Write-Output "---- Currently Scheduled Tasks ----"
     Write-Output ""
     $MaintModeTaskInfo = Get-PMScheduledTaskInfo -TaskName $MaintModeTaskName
-    $PowerOffTaskInfo = Get-PMScheduledTaskInfo -TaskName $PowerOnTaskName
-    $PowerOnTaskInfo = Get-PMScheduledTaskInfo -TaskName $PowerOffTaskName
+    $PowerOffTaskInfo = Get-PMScheduledTaskInfo -TaskName $PowerOffTaskName
+    $PowerOnTaskInfo = Get-PMScheduledTaskInfo -TaskName $PowerOnTaskName
     Write-Output "Task Name: $MaintModeTaskName"
     Write-Output "Task Time: Runs Daily At: $($MaintModeTaskInfo.Time)"
     Write-Output "Last Run: $($MaintModeTaskInfo.LastRunTime)"
@@ -123,6 +123,7 @@ function Show-PMConfig{
     Write-Output "Last Run: $($PowerONTaskInfo.LastRunTime)"
     Write-Output ""
     Write-Output "----- Power Managed Machine Catalogs -----"
+    Write-Output ""
     foreach($PMCatalog in $PMcatalogNames){
         Write-Output "PM Catalog Name: $PMCatalog"
         Write-Output "Excluded Machines: $($config.PMCatalogs.$PMCatalog.ExcludedMachines)"
@@ -537,7 +538,6 @@ function Get-PMScheduledTaskInfo{
     [string]
     $TaskName
     )
-    Write-Output "The TAsk NAME IS! $TaskName!"
         $Info = Get-ScheduledTaskInfo -TaskName $TaskName -ErrorAction SilentlyContinue
         if($Info){
             $Time = $Info.NextRunTime | Get-Date -Format t
