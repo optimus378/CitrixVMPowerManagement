@@ -1,9 +1,17 @@
 ## TODO -- Explanation 
 ## Error Handling
 ## Add The ability to detect if Dns Names Changes 
+  ## How?> 
+  ## Get a snapshot of the current MAchine Catalog and Store in config. 
+  ## Check to see if machine catalog changed 
+  ## Then Report with instuctions. 
+
 ## Run the POwer Off SCript multiple times during the night. 
+## How? 
+## Create another Scheduled Task to run an hour or two before. 
 ## Log Rotation 
 ## Teams Reports. 
+## How? Would need to get report everytime scheduled task is run. or.. create another scheduled task that gets a snapshot of all MCs current state. 
 ## Get Current Stats of all Power Manageged Machines. -- That would entries in the Config.json. 
 ## Send report letting know which user kept machine from logging on off  <-- Low Priority. 
 ##
@@ -27,7 +35,8 @@ $SleepWait = 30 ## Amount of time (in Seconds) to wait for Graceful User Log Off
 ### SCHEDULED TASK GLOBALS ###
 ### Scheduled Task Names
 $MaintModeTaskName = "S@W VM Power Management - Set Global Maintenance Mode"
-$PowerOffTaskName = "S@W VM Power Management - Global Power OFF Machines"
+$IntialPowerOffTaskName = "S@W VM Power Management - Global Power OFF Machines"
+$SecondaryPowerOffTaskName = "S@W VM Power Management - Global Secondary Power Off Machines"
 $PowerOnTaskName = "S@W VM Power Management - Global Power ON Machines"
 ## Scheduled Task Scripts  
 $MaintModeScript = @"
@@ -35,10 +44,18 @@ Import-Module $ProgramLocation\$ProgramFileName
 Set-MaintenanceMode
 Write-Log "IMPACT ACTION: RAN TASK SCRIPT: TASK-SCRIPT-Set-GlobalMaintenanceMode.ps1"
 "@
-$PowerOffMachinesScript = @"
+$IntialPowerOffMachinesScript = @"
 Import-Module $ProgramLocation\$ProgramFileName
 PowerOffMachines
-Write-Log "IMPACT ACTION: RAN TASK SCRIPT: TASK-SCRIPT-GlobalPowerOffMachines.ps1"
+Write-Log "IMPACT ACTION: RAN TASK SCRIPT: TASK-SCRIPT-IntialGlobalPowerOffMachines.ps1"
+Write-Log "Ran Intial Power Off Machines Script
+"@
+$SecondaryPowerOffMachinesScript = @"
+Import-Module $ProgramLocation\$ProgramFileName
+Write-Log "Attempting to Power Off Machines a second time..."
+PowerOffMachines
+Write-Log "IMPACT ACTION: RAN TASK SCRIPT: TASK-SCRIPT-SecondaryGlobalPowerOffMachines.ps1"
+Write-Log "Ran Secondary Power Off Cycle"
 "@
 $PowerOnMachinesScript = @"
 Import-Module $ProgramLocation\$ProgramFileName
@@ -48,13 +65,16 @@ Write-Log "IMPACT ACTION: RAN TASK SCRIPT: ./TASK-SCRIPT-GlobalPowerOnMachines.p
 
 ### Scheduled Task Descriptions
 $MaintModeTaskDescription = "Task Created by VMPowerManagement.Ps1. This task puts machines that are configured with S@W VM Power Management into Maintenance Mode." 
-$PowerOffTaskDescription = "Task Created by VMPowerManagement.Ps1. This task Powers Off Machine that are configured with S@W VM Power Management."
+$IntialPowerOffTaskDescription = "Task Created by VMPowerManagement.Ps1. This task Powers Off Machine that are configured with S@W VM Power Management."
+$SecondaryPowerOffDescription = "Task Created by VMPowerManagement.ps1 This task tries a second time to Power Off Machines that may have been skipped the 1st try because a session was below IdleThreshold."
 $PowerOnTaskDescription = "Task Created by VMPowerManagement.Ps1. This task Powers ON Machines configured by S@W VM Power Management."
 
 ### Scheduled Task Script File Paths/FileNames
 $MaintModeScriptFilePath = "$ProgramLocation\TASK-SCRIPT-Set-GlobalMainteanceMode.ps1"
-$PowerOffScriptFilePath= "$ProgramLocation\TASK-SCRIPT-GlobalPowerOffMachines.ps1"
+$IntialPowerOffScriptFilePath= "$ProgramLocation\TASK-SCRIPT-GlobalIntialPowerOffMachines.ps1"
+$SecondaryPowerOffScriptFilePath = "$ProgramLocation\TASK-SCRIPT-GlobalSecondaryPowerOffMachines.ps1"
 $PowerOnSCriptFilePath= "$ProgramLocation\TASK-SCRIPT-GlobalPowerOnMachines.ps1"
+
 
 ## END SCHEDULED TASK GLOBALS 
 ## END GLOBALS
@@ -108,8 +128,8 @@ function Show-PMConfig{
     Write-Output "---- Currently Scheduled Tasks ----"
     Write-Output ""
     $MaintModeTaskInfo = Get-PMScheduledTaskInfo -TaskName $MaintModeTaskName
-    $PowerOffTaskInfo = Get-PMScheduledTaskInfo -TaskName $PowerOffTaskName
-    $PowerOnTaskInfo = Get-PMScheduledTaskInfo -TaskName $PowerOnTaskName
+    $PowerOffTaskInfo = Get-PMScheduledTaskInfo -TaskName $PowerOnTaskName
+    $PowerOnTaskInfo = Get-PMScheduledTaskInfo -TaskName $PowerOffTaskName
     Write-Output "Task Name: $MaintModeTaskName"
     Write-Output "Task Time: Runs Daily At: $($MaintModeTaskInfo.Time)"
     Write-Output "Last Run: $($MaintModeTaskInfo.LastRunTime)"
@@ -123,7 +143,6 @@ function Show-PMConfig{
     Write-Output "Last Run: $($PowerONTaskInfo.LastRunTime)"
     Write-Output ""
     Write-Output "----- Power Managed Machine Catalogs -----"
-    Write-Output ""
     foreach($PMCatalog in $PMcatalogNames){
         Write-Output "PM Catalog Name: $PMCatalog"
         Write-Output "Excluded Machines: $($config.PMCatalogs.$PMCatalog.ExcludedMachines)"
@@ -472,9 +491,12 @@ function Create-ScheduledTaskScripts{
     $MaintModeScript | Out-File $MaintModeScriptFilePath
     Write-Log "CREATED/MODFIED TASK SCRIPT $MaintModeScriptFilePath"
     Write-Output "CREATED/MODFIED TASK SCRIPT $MaintModeScriptFilePath"
-    $PowerOffMachinesScript| Out-File $PowerOffScriptFilePath
-    Write-Log "CREATED/MODFIED TASK SCRIPT $PowerOffScriptFilePath"
-    Write-Output "CREATED/MODFIED TASK SCRIPT $PowerOffScriptFilePath"
+    $IntialPowerOffMachinesScript| Out-File $IntialPowerOffScriptFilePath
+    Write-Log "CREATED/MODFIED TASK SCRIPT $IntialPowerOffScriptFilePath"
+    Write-Output "CREATED/MODFIED TASK SCRIPT $IntialPowerOffScriptFilePath"
+    $SecondaryPowerOffMachinesScript| Out-File $SecondaryPowerOffScriptFilePath
+    Write-Log "CREATED/MODFIED TASK SCRIPT $SecondaryPowerOffScriptFilePath"
+    Write-Output "CREATED/MODFIED TASK SCRIPT $SecondaryPowerOffScriptFilePath"
     $PowerOnMachinesScript | Out-File $PowerONScriptFilePath
     Write-Log "CREATED/MODFIED TASK SCRIPT $PowerONScriptFilePath"
     Write-Output "CREATED/MODFIED TASK SCRIPT $PowerONScriptFilePath"
@@ -488,7 +510,10 @@ function Set-PMGlobalScheduledTasks{
         $MaintModeTime,
         [Parameter(Mandatory)]
         [string]
-        $PowerOffTime,
+        $IntialPowerOffTime,
+        [Parameter(Mandatory)]
+        [string]
+        $SecondaryPowerOffTime,
         [Parameter(Mandatory)]
         [string]
         $PowerOnTime
@@ -496,7 +521,8 @@ function Set-PMGlobalScheduledTasks{
     
     Create-ScheduledTaskScripts
     Set-PMGLobalScheduledTask -TaskName $MaintModeTaskName -Description $MaintModeTaskDescription -ScriptFilePath $MaintModeScriptFilePath -Time $MaintModeTime -ErrorAction Stop
-    Set-PMGLobalScheduledTask -TaskName $PowerOffTaskName -Description $PowerOffTaskDescription -ScriptFilePath $PowerOffScriptFilePath -Time $PowerOffTime -ErrorAction Stop
+    Set-PMGLobalScheduledTask -TaskName $IntialPowerOffTaskName -Description $IntialPowerOffTaskDescription -ScriptFilePath $IntialPowerOffScriptFilePath -Time $PowerOffTime -ErrorAction Stop
+    Set-PMGlobalScheduledTask -TaskName $SecondaryPowerOffTaskName -Description $SecondaryPowerOffDescription -ScriptFilePath $SecondaryPowerOffScriptFilePath $SecondaryPowerOffTime -ErrorAction Stop
     Set-PMGLobalScheduledTask -TaskName $PowerONTaskName -Description $PowerONTaskDescription -ScriptFilePath $PowerONScriptFilePath -Time $PowerONTime -ErrorAction Stop
 
 }
@@ -538,6 +564,7 @@ function Get-PMScheduledTaskInfo{
     [string]
     $TaskName
     )
+    Write-Output "The TAsk NAME IS! $TaskName!"
         $Info = Get-ScheduledTaskInfo -TaskName $TaskName -ErrorAction SilentlyContinue
         if($Info){
             $Time = $Info.NextRunTime | Get-Date -Format t
@@ -550,7 +577,8 @@ function Get-PMScheduledTaskInfo{
 ## REmove-AllPMScheduledTasks -- Deletes All Scheduled Tasks from the Machine it was run. 
 function Remove-AllPMScheduledTasks{ 
     Unregister-ScheduledTask -TaskName $MaintModeTaskName -Confirm:$False -ErrorAction SilentlyContinue
-    Unregister-ScheduledTask -TaskName $PowerOffTaskName -Confirm:$False -ErrorAction SilentlyContinue
+    Unregister-ScheduledTask -TaskName $IntialPowerOffTaskName -Confirm:$False -ErrorAction SilentlyContinue
+    Unregister-ScheduledTask -TaskName $SecondaryPowerOnTaskName -Confirm:$False -ErrorAction SilentlyContinue
     Unregister-ScheduledTask -TaskName $PowerOnTaskName -Confirm:$False -ErrorAction SilentlyContinue
     Write-Log "Succesfully Removed All Scheduled Tasks. Power Management will no longer Run."
 
