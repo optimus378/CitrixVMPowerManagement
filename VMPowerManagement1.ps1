@@ -1,20 +1,3 @@
-## TODO -- Explanation 
-## Error Handling
-## Add The ability to detect if Dns Names Changes 
-  ## How?> 
-  ## Get a snapshot of the current MAchine Catalog and Store in config. 
-  ## Check to see if machine catalog changed 
-  ## Then Report with instuctions. 
-
-## Run the POwer Off SCript multiple times during the night. 
-## How? 
-## Create another Scheduled Task to run an hour or two before. 
-## Log Rotation 
-## Teams Reports. 
-## How? Would need to get report everytime scheduled task is run. or.. create another scheduled task that gets a snapshot of all MCs current state. 
-## Get Current Stats of all Power Manageged Machines. -- That would entries in the Config.json. 
-## Send report letting know which user kept machine from logging on off  <-- Low Priority. 
-##
 ## GLOBALS ##
 
 $PMConfigFile = "./config.json"
@@ -128,15 +111,20 @@ function Show-PMConfig{
     Write-Output "---- Currently Scheduled Tasks ----"
     Write-Output ""
     $MaintModeTaskInfo = Get-PMScheduledTaskInfo -TaskName $MaintModeTaskName
-    $PowerOffTaskInfo = Get-PMScheduledTaskInfo -TaskName $PowerOnTaskName
-    $PowerOnTaskInfo = Get-PMScheduledTaskInfo -TaskName $PowerOffTaskName
+    $IntialPowerOffTaskInfo = Get-PMScheduledTaskInfo -TaskName $IntialPowerOffTaskName
+    $SecondaryPowerOffTaskInfo = Get-PMScheduledTaskInfo -TaskName $SecondaryPowerOffTaskName
+    $PowerOnTaskInfo = Get-PMScheduledTaskInfo -TaskName $PowerOnTaskName
     Write-Output "Task Name: $MaintModeTaskName"
     Write-Output "Task Time: Runs Daily At: $($MaintModeTaskInfo.Time)"
     Write-Output "Last Run: $($MaintModeTaskInfo.LastRunTime)"
     Write-Output ""
-    Write-Output "Task Name: $PowerOffTaskName"
-    Write-Output "Task Time: Runs Daily At: $($PowerOffTaskInfo.Time)"
-    Write-Output "Last Run: $($PowerOffTaskInfo.LastRunTime)"
+    Write-Output "Task Name: $IntialPowerOffTaskName"
+    Write-Output "Task Time: Runs Daily At: $($IntialPowerOffTaskInfo.Time)"
+    Write-Output "Last Run: $($IntialPowerOffTaskInfo.LastRunTime)"
+    Write-Output ""
+    Write-Output "Task Name: $SecondaryPowerOffTaskName"
+    Write-Output "Task Time: Runs Daily At: $($SecondaryPowerOffTaskInfo.Time)"
+    Write-Output "Last Run: $($SecondaryPowerOffTaskInfo.LastRunTime)"
     Write-Output ""
     Write-Output "Task Name: $PowerOnTaskName"
     Write-Output "Task Time: Runs Daily At: $($PowerOnTaskInfo.Time)"
@@ -564,7 +552,6 @@ function Get-PMScheduledTaskInfo{
     [string]
     $TaskName
     )
-    Write-Output "The TAsk NAME IS! $TaskName!"
         $Info = Get-ScheduledTaskInfo -TaskName $TaskName -ErrorAction SilentlyContinue
         if($Info){
             $Time = $Info.NextRunTime | Get-Date -Format t
