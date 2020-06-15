@@ -31,7 +31,7 @@ $IntialPowerOffMachinesScript = @"
 Import-Module $ProgramLocation\$ProgramFileName
 PowerOffMachines
 Write-Log "IMPACT ACTION: RAN TASK SCRIPT: TASK-SCRIPT-IntialGlobalPowerOffMachines.ps1"
-Write-Log "Ran Intial Power Off Machines Script
+Write-Log "Ran Intial Power Off Machines Script"
 "@
 $SecondaryPowerOffMachinesScript = @"
 Import-Module $ProgramLocation\$ProgramFileName
@@ -428,14 +428,16 @@ function PowerOffMachines{
             $MachineIdleDurationTimes = Get-BrokerSession | Where-Object {$_.DNSName -eq $Machine} | select-object -property Idleduration ## Get Active and Disconnected Sessions' Idle Duration Times 
             $MachineDurationTimesinMins= $MachineIdleDurationTimes.IdleDuration.TotalMinutes
             if($MachineDurationTimesinMins.count -gt 0){ ## If There are Idle Duration Times... (If $RawIdleDuration Variable is not $null)
-                if ($MachineIdleDurationTimesinMins -as [int] -le $IdleThreshold){  ## $IdleDuration times are converted to Integers and are compared against the IdleThreshold in $PMConfig. If any Idle Duration time is less than the IdleThreshold, Users are still active, thus the machine is skipped.  
-                    Write-Log "$Machine was skipped because there's an Active Session below the IdleThreshold" 
-                    Write-Output "$Machine was skipped because there's an Active Session below the IdleThreshold" 
-                    Continue ## IdleDuration time is less than Threshold - Continue returns program flow to the inner most loop.
-                    }
+                foreach($time in $MachineDurationTimesinMins -as [int]){
+                    if ($time -as [int] -le $IdleThreshold){  
+                        Write-Log "$Machine was skipped because there's an Active Session below the IdleThreshold" 
+                        Write-Output "$Machine was skipped because there's an Active Session below the IdleThreshold" 
+                        Write-Log "$Machine : Idle Threshold Times in Mins: $MachineDurationTimesinMins"
+                        Write-Log "$Machine : Idle Duration Times in Citrix: $MachineIdleDurationTimes"                 
+                        Continue ## IdleDuration time is less than Threshold - Continue returns program flow to the inner most loop.
+                        }
             }else{
             Write-Log "$Machine has no sessions below IdleThreshold of $IdleThreshold, Continuing With Power OFF..."
-            Write-Log "GraceFully Logging Off Sessions on $Machine. Waiting $SleepWait Seconds..."
             Get-BrokerSession | Where-Object DNSName -eq $Machine | Stop-Brokersession
             Write-Output "GraceFully Logging Off Sessions on $Machine. Waiting $SleepWait Seconds..."
             Start-Sleep $SleepWait
