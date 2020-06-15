@@ -435,7 +435,9 @@ function PowerOffMachines{
                         Write-Log "$Machine : Idle Threshold Times in Mins: $MachineDurationTimesinMins"
                         Write-Log "$Machine : Idle Duration Times in Citrix: $MachineIdleDurationTimes"                 
                         Continue ## IdleDuration time is less than Threshold - Continue returns program flow to the inner most loop.
-                        }
+                    }
+                }
+
             }else{
             Write-Log "$Machine has no sessions below IdleThreshold of $IdleThreshold, Continuing With Power OFF..."
             Get-BrokerSession | Where-Object DNSName -eq $Machine | Stop-Brokersession
