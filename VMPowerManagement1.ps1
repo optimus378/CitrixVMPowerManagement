@@ -25,25 +25,23 @@ $PowerOnTaskName = "S@W VM Power Management - Global Power ON Machines"
 $MaintModeScript = @"
 Import-Module $ProgramLocation\$ProgramFileName
 Set-MaintenanceMode
-Write-Log "IMPACT ACTION: RAN TASK SCRIPT: TASK-SCRIPT-Set-GlobalMaintenanceMode.ps1"
+Write-Log "Set Machines into Maintenence Mode."
 "@
 $IntialPowerOffMachinesScript = @"
 Import-Module $ProgramLocation\$ProgramFileName
 PowerOffMachines
-Write-Log "IMPACT ACTION: RAN TASK SCRIPT: TASK-SCRIPT-IntialGlobalPowerOffMachines.ps1"
 Write-Log "Ran Intial Power Off Machines Script"
 "@
 $SecondaryPowerOffMachinesScript = @"
 Import-Module $ProgramLocation\$ProgramFileName
 Write-Log "Attempting to Power Off Machines a second time..."
 PowerOffMachines
-Write-Log "IMPACT ACTION: RAN TASK SCRIPT: TASK-SCRIPT-SecondaryGlobalPowerOffMachines.ps1"
 Write-Log "Ran Secondary Power Off Cycle"
 "@
 $PowerOnMachinesScript = @"
 Import-Module $ProgramLocation\$ProgramFileName
 PowerOnMachines
-Write-Log "IMPACT ACTION: RAN TASK SCRIPT: ./TASK-SCRIPT-GlobalPowerOnMachines.ps1"
+Write-Log "Ran Power On Machines Scheduled Task."
 "@
 
 ### Scheduled Task Descriptions
@@ -379,7 +377,6 @@ function Get-CitrixMachineStats{
 #Set-MaintenanceMode. Sets All MAchines not in $PMCatalog.ExcludedMAchines into Maintenance Mode. This is a pre-function that's run before PowerOffMachines. The purpose is to no longer allow logons to the Machines, so they can be powered Off. 
 # To Do. Get List of MCs and Machines that were affected by this function with date. 
 function Set-MaintenanceMode{
-    $Stats = @{} 
     $config = Get-PMCurrentConfig ## Get Current PMConfig
     $PMCatalogs = $config.PMCatalogs.PSObject.Properties.Name ## Get all the $PMCatalogs by Name
     foreach ($PMCatalog in $PMCatalogs){ ## Loop Through Each $PMCatalog
@@ -395,7 +392,7 @@ function Set-MaintenanceMode{
         foreach ($Machine in $IncludedMachines){ ## Loops Through Each Machine in $IncludedMachines
                 $MachineInstance = Get-BrokerMachine -DNSName $Machine
                 Set-BrokerMachineMaintenanceMode -InputObject $MachineInstance $true   ## Sets $Machine into Maintenance Mode
-                Write-Log "IMPACT-ACTION: Set $Machine in Machine Catalog $PMCatalog into Maintenance Mode."
+                Write-Log "Set $Machine in Machine Catalog $PMCatalog into Maintenance Mode."
         }
     }
     
@@ -419,6 +416,10 @@ function PowerOffMachines{
         foreach ($Machine in $IncludedMachines){ ## For each of the the machines that may be powered off...
             Write-Log "Starting Power OFF Cycle For $Machine..."
             $MachineStats = Get-CitrixMachineStats -Machine $Machine ## Get the Stats of the machines. In this case, we're checking the status of Maintenance Mode
+            if($Machinestats.Powerstate -eq "Off"){
+                Write-Log "$Machine is already powered off, skipping. This is either because it was manually shutdown, or it was powered off in the intial power off cycle."
+                continue
+            }
             if(!($MachineStats.InMaintenanceMode)){ ## If the Machine is not in Maintenance Mode, We're Skipping. 
                 write-output "$Machine is not In MaintenanceMode... Skipping"
                 Write-Log "$Machine is not in Maintenance Mode... Will not Continue with Power Off"
