@@ -425,10 +425,10 @@ function PowerOffMachines{
                 Write-Log "$Machine is not in Maintenance Mode... Will not Continue with Power Off"
                 Continue
             } 
-            Write-Log "$Machine is in Maintenance Mode, Continuing.."
+            Write-Log "$Machine is not already powered off and is in Maintenance Mode, Continuing.."
             $MachineIdleDurationTimes = Get-BrokerSession | Where-Object {$_.DNSName -eq $Machine} | select-object -property Idleduration ## Get Active and Disconnected Sessions' Idle Duration Times 
             $MachineDurationTimesinMins= $MachineIdleDurationTimes.IdleDuration.TotalMinutes
-            if($MachineDurationTimesinMins.count -gt 0){ ## If There are Idle Duration Times... (If $RawIdleDuration Variable is not $null)
+            if($MachineDurationTimesinMins.count -gt 0){ ## If There are Idle Duration Times...Check to see if they are above the IdleThreshold
                 foreach($time in $MachineDurationTimesinMins -as [int]){
                     if ($time -as [int] -le $IdleThreshold){  
                         Write-Log "$Machine was skipped because there's an Active Session below the IdleThreshold" 
@@ -439,7 +439,7 @@ function PowerOffMachines{
                     }
                 }
 
-            }else{
+            }
             Write-Log "$Machine has no sessions below IdleThreshold of $IdleThreshold, Continuing With Power OFF..."
             Get-BrokerSession | Where-Object DNSName -eq $Machine | Stop-Brokersession
             Write-Output "GraceFully Logging Off Sessions on $Machine. Waiting $SleepWait Seconds..."
@@ -449,13 +449,13 @@ function PowerOffMachines{
             New-BrokerHostingPowerAction -Action 'TurnOff' -MachineName $MachineInstance.MachineName
             Write-Log "POWERED OFF $Machine" 
             Write-OutPut "POWERED OFF $Machine"
-            }
+        }
 
                         
-         }
+    }
            
-      } 
 }
+
 ## Powers On all Eligible Maachines listed in Power Management.              
 function PowerOnMachines{
     $config = Get-PMCurrentConfig ## Get Current Config
